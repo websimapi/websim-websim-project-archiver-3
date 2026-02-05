@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSim Project Archiver</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "jszip": "https://esm.sh/jszip@3.10.1"
+        }
+    }
+    </script>
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="title-group">
+            <h1>WebSim Archiver</h1>
+            <span>Backup user projects to .zip</span>
+        </div>
+        <div class="controls">
+            <input type="text" id="username" placeholder="Enter username (e.g. @user)" autocomplete="off">
+            <button id="start-btn">Start Backup</button>
+            <button id="resume-btn" class="secondary" style="display:none;" title="Resume from last saved position">Resume</button>
+            <button id="stop-btn" class="stop" disabled>Stop</button>
+            <button id="history-btn" class="secondary">History</button>
+        </div>
+    </header>
+
+    <!-- History Modal -->
+    <div id="history-panel" class="history-panel hidden">
+        <div class="history-header">
+            <h2>Local Archive History</h2>
+            <div style="display:flex; gap:1rem; align-items:center;">
+                <span id="history-stats" style="color:var(--text-dim); font-size:0.9rem;">0 items</span>
+                <button id="clear-history-btn" class="danger-sm">Clear History</button>
+                <button id="close-history-btn">Close</button>
+            </div>
+        </div>
+        <div id="history-list" class="history-list">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="settings-panel">
+            <div class="settings-grid">
+                <div class="setting-group">
+                    <label for="date-start">Start Date</label>
+                    <input type="datetime-local" id="date-start">
+                </div>
+                <div class="setting-group">
+                    <label for="date-end">End Date</label>
+                    <input type="datetime-local" id="date-end">
+                </div>
+                <div class="setting-group">
+                    <label for="download-mode">Download Mode</label>
+                    <select id="download-mode">
+                        <option value="batch">One Big ZIP (Batch)</option>
+                        <option value="individual">Individual ZIPs (Stream)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="delay-ms">Delay (ms)</label>
+                    <input type="number" id="delay-ms" value="3000" min="500" step="500">
+                </div>
+                <div class="setting-group">
+                    <label for="prompt-mode">Prompt History</label>
+                    <select id="prompt-mode">
+                        <option value="with">Download With Prompt History</option>
+                        <option value="only">Download ONLY prompt history</option>
+                        <option value="none">Download Without Prompt History</option>
+                    </select>
+                </div>
+                <div class="setting-group checkbox-group">
+                    <input type="checkbox" id="skip-forks">
+                    <label for="skip-forks" style="cursor:pointer">Skip Forks</label>
+                </div>
+                <div class="setting-group checkbox-group">
+                    <input type="checkbox" id="include-history">
+                    <label for="include-history" style="cursor:pointer" title="Fetch all versions and create git script">Git History</label>
+                </div>
+                <div class="setting-group checkbox-group">
+                    <input type="checkbox" id="skip-archived" checked>
+                    <label for="skip-archived" style="cursor:pointer" title="Skip projects already in local catalog">Skip Archived</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <span class="stat-val" id="stat-total">0</span>
+                <span class="stat-label">Projects Found</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val" id="stat-processed">0</span>
+                <span class="stat-label">Processed</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val" id="stat-size">0 Bytes</span>
+                <span class="stat-label">Archive Size (Est)</span>
+            </div>
+        </div>
+
+        <div id="project-list" class="project-list">
+            <!-- Project items injected here -->
+            <div style="text-align:center; color: var(--text-dim); padding: 2rem;">
+                Enter a username and click "Start Backup" to begin scanning.
+            </div>
+        </div>
+    </div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

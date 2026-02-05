@@ -2,7 +2,7 @@ import JSZip from 'jszip';
 import { getAllUserProjectsGenerator } from './api_user.js';
 import { getProjectHtml } from './api_html.js';
 import { getAssets, processAssets } from './api_assets.js';
-import { getAllProjectRevisions, getProjectById, getProjectBySlug } from './api_project.js';
+import { getAllProjectRevisions, getProjectById, getRevisionDetails } from './api_project.js';
 import { addToCatalog, isArchived, getCatalogAsArray, clearCatalog } from './catalog.js';
 
 // --- State ---
@@ -475,21 +475,12 @@ async function processProject(project, username, options) {
 
             console.log(`[History] Found ${revisions.length} revs for ${project.slug}`);
             
-            // Save Prompt History (JSON)
+            // Save Prompt History (JSON) - Summary List
             if (savePrompts) {
                 const historyJson = JSON.stringify(revisions, null, 2);
                 await writer.add(`${projectFolderName}`, { 
                     'project_history.json': new TextEncoder().encode(historyJson) 
                 });
-            }
-
-            if (skipAssets) {
-                updateStatus(uiId, 'done', 'History Saved (JSON)');
-                if (mode === 'individual') await writer.finalize();
-                processedCount++;
-                statProcessed.textContent = processedCount;
-                addToCatalog(project);
-                return;
             }
 
             let commitLog = "";
@@ -524,14 +515,47 @@ async function processProject(project, username, options) {
                     try {
                         // Work Task
                         const taskPromise = (async () => {
-                            const [assetList, htmlContent] = await Promise.all([
-                                getAssets(project.id, vNum),
-                                getProjectHtml(project.id, vNum)
-                            ]);
-                            const files = await processAssets(assetList, project.id, vNum);
-                            
-                            if (htmlContent) files['index.html'] = new TextEncoder().encode(htmlContent);
-                            else if (!files['index.html']) files['index.html'] = new TextEncoder().encode(`<!-- Version ${vNum}: Missing -->`);
+                            const files = {};
+
+                            // 1. Fetch Full Metadata (Prompt History)
+                            if (savePrompts) {
+                                try {
+                                    // We fetch detailed revision data because the summary list often lacks the full prompt/system prompt
+                                    const revDetails = await getRevisionDetails(project.id, vNum);
+                                    const revData = revDetails.revision || revDetails; // Unwrap if needed
+                                    
+                                    files['revision_meta.json'] = new TextEncoder().encode(JSON.stringify(revData, null, 2));
+                                    
+                                    // Extract prompt text for convenience
+                                    // Check common locations: .prompt, .ui_prompt, .system_prompt, etc.
+                                    const pText = revData.prompt || revData.ui_prompt;
+                                    if (typeof pText === 'string') {
+                                        files['prompt.txt'] = new TextEncoder().encode(pText);
+                                    }
+                                } catch(e) {
+                                    console.warn(`[Main] Failed to fetch details for Rev ${vNum}`, e);
+                                    // If strict prompt mode, maybe we should fail? But best effort is usually preferred.
+                                    files['revision_meta_error.txt'] = new TextEncoder().encode(`Failed to fetch metadata: ${e.message}`);
+                                }
+                            }
+
+                            // 2. Fetch Assets (if not skipped)
+                            if (!skipAssets) {
+                                const [assetList, htmlContent] = await Promise.all([
+                                    getAssets(project.id, vNum),
+                                    getProjectHtml(project.id, vNum)
+                                ]);
+                                const assetFiles = await processAssets(assetList, project.id, vNum);
+                                Object.assign(files, assetFiles);
+                                
+                                if (htmlContent) files['index.html'] = new TextEncoder().encode(htmlContent);
+                                else if (!files['index.html']) files['index.html'] = new TextEncoder().encode(`<!-- Version ${vNum}: Missing -->`);
+                            } else {
+                                // If skipping assets, ensure we at least have the metadata
+                                if (Object.keys(files).length === 0) {
+                                    files['README.txt'] = new TextEncoder().encode(`Assets skipped for version ${vNum}. Only metadata requested.`);
+                                }
+                            }
                             
                             await writer.add(`${projectFolderName}/revisions/${vNum}`, files);
                         })();
